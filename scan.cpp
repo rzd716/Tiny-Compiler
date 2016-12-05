@@ -98,7 +98,6 @@ TokenType getToken(void)
 	/* flag to indicate save to tokenString */
 	int save;
 
-	columno = 0;
 	while (state != DONE)
 	{
 		int c = getNextChar();
@@ -285,7 +284,6 @@ TokenType getToken(void)
 	}
 	if (TraceScan) {
 		fprintf(listing, "\tline%d: ", lineno);
-		if(columno==0)
 		columno = linepos;
 		printToken(currentToken, tokenString);
 	}
