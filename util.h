@@ -9,8 +9,14 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-/* Procedure printToken prints a token
-* and its lexeme to the listing file
-*/
 void printToken(TokenType, const char*);
+
+TreeNode * newStmtNode(StmtKind);
+
+TreeNode * newExpNode(ExpKind);
+
+void printTree(TreeNode *);
+
+char * copyString(char *);
+
 #endif

@@ -50,7 +50,7 @@ extern int columno; /*source column number for listing */
 				   /**************************************************/
 
 typedef enum { StmtK, ExpK } NodeKind;
-typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK } StmtKind;
+typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK,StrDeclareK,IntDeclareK,BoolDeclareK,WhileK} StmtKind;
 typedef enum { OpK, ConstK, IdK } ExpKind;
 
 /* ExpType is used for type checking */

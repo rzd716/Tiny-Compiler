@@ -8,7 +8,7 @@
 #include "globals.h"
 
 /* set NO_PARSE to TRUE to get a scanner-only compiler */
-#define NO_PARSE TRUE
+#define NO_PARSE FALSE
 /* set NO_ANALYZE to TRUE to get a parser-only compiler */
 #define NO_ANALYZE FALSE
 
@@ -20,6 +20,8 @@
 #include "util.h"
 #if NO_PARSE
 #include "scan.h"
+#else
+#include "parse.h"
 #endif
 
 /* allocate global variables */
@@ -31,8 +33,9 @@ FILE * code;
 
 /* allocate and set tracing flags */
 int EchoSource = FALSE;
-int TraceScan = TRUE;
+int TraceScan = FALSE;
 int Error = FALSE;
+int TraceParse = TRUE;
 
 int main(int argc, char * argv[])
 {
@@ -45,7 +48,7 @@ int main(int argc, char * argv[])
 	}
 
 	strcpy(pgm, argv[1]);*/
-	strcpy(pgm, "E:\\ctest\\experiment1_test1_in.txt");
+	strcpy(pgm, "E:\\ctest\\experiment2_test1_in.txt");
 	if (strchr(pgm, '.') == NULL)
 		strcat(pgm, ".tny");
 	source = fopen(pgm, "r");
@@ -55,10 +58,16 @@ int main(int argc, char * argv[])
 		exit(1);
 	}
 	listing = stdout; /* send listing to screen */
-	fprintf(listing, "\nTINY COMPILATION: %s\n", pgm);
+	fprintf(listing, "\nTINY+ COMPILATION: %s\n", pgm);
 
 #if NO_PARSE
 	while (getToken() != ENDFILE);
+#else
+	syntaxTree = parse();
+	if (TraceParse) {
+		fprintf(listing, "\nSyntax tree:\n");
+		printTree(syntaxTree);
+	}
 #endif
 	fclose(source);
 
