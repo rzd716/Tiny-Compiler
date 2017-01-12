@@ -1,6 +1,7 @@
 #include "parse.h"
 #include "scan.h"
 #include "util.h"
+#include "symtab.h"
 
 static TokenType token; /* holds current token */
 
@@ -13,17 +14,17 @@ static TreeNode * assign_stmt(void);
 static TreeNode * read_stmt(void);
 static TreeNode * write_stmt(void);
 static TreeNode * exp(void);
-static TreeNode * simple_exp(void);
+static TreeNode * arithmetic_exp(void);
 static TreeNode * term(void);
 static TreeNode * factor(void);
-static TreeNode * str_declare_stmt(void);
-static TreeNode * int_declare_stmt(void);
-static TreeNode * bool_declare_stmt(void);
-static TreeNode * id_exp(void);
 static TreeNode * while_stmt(void);
 static TreeNode * or_exp(void);
 static TreeNode * and_exp(void);
 static TreeNode * not_exp(void);
+static TreeNode * program(void);
+static void declarations(void);
+static TreeNode * relational_exp(void);
+static bool isDeclare(TokenType);
 
 static void syntaxError(char * message)
 {
@@ -51,9 +52,6 @@ TreeNode * statement(void)
 	case ID: t = assign_stmt(); break;
 	case READ: t = read_stmt(); break;
 	case WRITE: t = write_stmt(); break;
-	case Int:t = int_declare_stmt(); break;
-	case Bool:t = bool_declare_stmt(); break;
-	case String:t = str_declare_stmt(); break;
 	case While:t = while_stmt(); break;
 	default: syntaxError("unexpected token -> ");
 		printToken(token, tokenString);
@@ -89,17 +87,50 @@ TreeNode * parse(void)
 {
 	TreeNode * t;
 	token = getToken();
-	t = stmt_sequence();
+	t = program();
 	if (token != ENDFILE)
 		syntaxError("Code ends before file\n");
 	return t;
 }
 
+TreeNode * program(void)
+{
+	declarations();
+	return stmt_sequence();
+}
+void declarations(void)
+{
+	while (isDeclare(token))
+	{
+		TokenType type = token;
+		match(token);
+		while (true)
+		{
+			if (token == ID)
+			{
+				st_first_insert(copyString(tokenString), lineno, location++, type);
+				match(token);
+				if (token == COMMA)match(token);
+				if (token == SEMI)break;
+			}
+			else
+			{
+				printf("Declare need ID token!!\n");
+			}
+		}
+		match(SEMI);
+	}
+}
+bool isDeclare(TokenType token)
+{
+	if (token == Int || token == Bool || token == String)return true;
+	return false;
+}
 TreeNode * if_stmt(void)
 {
 	TreeNode * t = newStmtNode(IfK);
 	match(IF);
-	if (t != NULL) t->child[0] = or_exp();
+	if (t != NULL) t->child[0] = exp();
 	match(THEN);
 	if (t != NULL) t->child[1] = stmt_sequence();
 	if (token == ELSE) {
@@ -110,22 +141,11 @@ TreeNode * if_stmt(void)
 	return t;
 }
 
-TreeNode * exp(void)
+TreeNode *exp(void)
 {
-	TreeNode * t = simple_exp();
-	if ((token == LT) || (token == EQ||token==GT||token==LTE||token==GTE)) {
-		TreeNode * p = newExpNode(OpK);
-		if (p != NULL) {
-			p->child[0] = t;
-			p->attr.op = token;
-			t = p;
-		}
-		match(token);
-		if (t != NULL)
-			t->child[1] = simple_exp();
-	}
-	return t;
+	return or_exp();
 }
+
 
 TreeNode * or_exp(void)
 {
@@ -147,7 +167,7 @@ TreeNode * or_exp(void)
 
 TreeNode * and_exp(void)
 {
-	TreeNode *t = exp();
+	TreeNode *t = not_exp();
 	while(token == And)
 	{
 		TreeNode *p = newExpNode(OpK);
@@ -158,12 +178,50 @@ TreeNode * and_exp(void)
 		}
 		match(token);
 		if (t != NULL)
-			t->child[1] = exp();
+			t->child[1] = not_exp();
 	}
 	return t;
 }
 
-TreeNode * simple_exp(void)
+TreeNode * not_exp(void)
+{
+	TreeNode * t=NULL;
+	if(token==Not)
+	{
+		TreeNode* p = newExpNode(OpK);
+		if (p != NULL) {
+			t = not_exp();
+			p->child[0] = t;
+			p->attr.op = token;
+			t = p;
+			match(token);
+		}
+	}
+	else
+	{
+		t = relational_exp();
+	}
+	return t;
+}
+
+TreeNode * relational_exp(void)
+{
+	TreeNode * t = arithmetic_exp();
+	if ((token == LT) || (token == EQ || token == GT || token == LTE || token == GTE)) {
+		TreeNode * p = newExpNode(OpK);
+		if (p != NULL) {
+			p->child[0] = t;
+			p->attr.op = token;
+			t = p;
+		}
+		match(token);
+		if (t != NULL)
+			t->child[1] = arithmetic_exp();
+	}
+	return t;
+}
+
+TreeNode * arithmetic_exp(void)
 {
 	TreeNode * t = term();
 	while ((token == PLUS) || (token == MINUS))
@@ -182,7 +240,7 @@ TreeNode * simple_exp(void)
 
 TreeNode * term(void)
 {
-	TreeNode * t = not_exp();
+	TreeNode * t = factor();
 	while ((token == TIMES) || (token == OVER))
 	{
 		TreeNode * p = newExpNode(OpK);
@@ -191,34 +249,19 @@ TreeNode * term(void)
 			p->attr.op = token;
 			t = p;
 			match(token);
-			p->child[1] = not_exp();
+			p->child[1] = factor();
 		}
 	}
 	return t;
 }
 
-TreeNode * not_exp(void)
-{
-	TreeNode * t = factor();
-	while (token==Not)
-	{
-		TreeNode * p = newExpNode(OpK);
-		if (p != NULL) {
-			p->child[0] = t;
-			p->attr.op = token;
-			t = p;
-			match(token);
-		}
-	}
-	return t;
-}
 
 TreeNode * factor(void)
 {
 	TreeNode * t = NULL;
 	switch (token) {
 	case NUM:
-		t = newExpNode(ConstK);
+		t = newExpNode(ConstIntK);
 		if ((t != NULL) && (token == NUM))
 			t->attr.val = atoi(tokenString);
 		match(NUM);
@@ -233,6 +276,21 @@ TreeNode * factor(void)
 		match(LPAREN);
 		t = exp();
 		match(RPAREN);
+		break;
+	case String:
+		t = newExpNode(ConstStringK);
+		if (t != NULL)t->attr.valStr = copyString(tokenString);
+		match(String);
+		break;
+	case True:
+		t = newExpNode(ConstBoolK);
+		if (t != NULL)t->attr.valBool=true;
+		match(True);
+		break;
+	case False:
+		t = newExpNode(ConstBoolK);
+		if (t != NULL)t->attr.valBool =false;
+		match(False);
 		break;
 	default:
 		syntaxError("unexpected token -> ");
@@ -279,44 +337,6 @@ TreeNode * write_stmt(void)
 	TreeNode * t = newStmtNode(WriteK);
 	match(WRITE);
 	if (t != NULL) t->child[0] = exp();
-	return t;
-}
-
-TreeNode * str_declare_stmt(void)
-{
-	TreeNode * t = newStmtNode(StrDeclareK);
-	match(String);
-	if (t != NULL)t->child[0]=id_exp();
-	return t;
-}
-
-TreeNode * int_declare_stmt(void)
-{
-	TreeNode * t = newStmtNode(IntDeclareK);
-	match(Int);
-	if (t != NULL)t->child[0] = id_exp();
-	return t;
-}
-
-TreeNode * bool_declare_stmt(void)
-{
-	TreeNode * t = newStmtNode(BoolDeclareK);
-	match(Bool);
-	if (t != NULL)t->child[0] = id_exp();
-	return t;
-}
-
-TreeNode * id_exp(void)
-{
-	TreeNode * t;
-	t = newExpNode(IdK);
-	if ((t != NULL) && (token == ID))
-		t->attr.name = copyString(tokenString);
-	match(ID);
-	if (token == COMMA) {
-		match(COMMA);
-		t->sibling = id_exp();
-	}
 	return t;
 }
 

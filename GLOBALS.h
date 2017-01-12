@@ -43,6 +43,7 @@ extern FILE* source; /* source code text file */
 extern FILE* listing; /* listing output text file */
 extern FILE* code; /* code text file for TM simulator */
 
+extern int location; /* counter for variable memory locations */
 extern int lineno; /* source line number for listing */
 extern int columno; /*source column number for listing */
 				   /**************************************************/
@@ -51,10 +52,10 @@ extern int columno; /*source column number for listing */
 
 typedef enum { StmtK, ExpK } NodeKind;
 typedef enum { IfK, RepeatK, AssignK, ReadK, WriteK,StrDeclareK,IntDeclareK,BoolDeclareK,WhileK} StmtKind;
-typedef enum { OpK, ConstK, IdK } ExpKind;
+typedef enum { OpK, ConstIntK,ConstBoolK,ConstStringK, IdK } ExpKind;
 
 /* ExpType is used for type checking */
-typedef enum { Void, Integer, Boolean } ExpType;
+typedef enum { Void, Integer, Boolean,StringET} ExpType;
 
 #define MAXCHILDREN 3
 
@@ -68,6 +69,8 @@ typedef struct treeNode
 	union {
 		TokenType op;
 		int val;
+		char * valStr;
+		bool valBool;
 		char * name;
 	} attr;
 	ExpType type; /* for type checking of exps */

@@ -6,6 +6,7 @@
 /****************************************************/
 
 #include "globals.h"
+#include "analyze.h"
 
 /* set NO_PARSE to TRUE to get a scanner-only compiler */
 #define NO_PARSE FALSE
@@ -27,6 +28,8 @@
 /* allocate global variables */
 int lineno = 0;  
 int columno = 0;
+int location = 0;
+
 FILE * source;
 FILE * listing;
 FILE * code;
@@ -36,6 +39,7 @@ int EchoSource = FALSE;
 int TraceScan = FALSE;
 int Error = FALSE;
 int TraceParse = TRUE;
+int TraceAnalyze = True;
 
 int main(int argc, char * argv[])
 {
@@ -48,7 +52,7 @@ int main(int argc, char * argv[])
 	}
 
 	strcpy(pgm, argv[1]);*/
-	strcpy(pgm, "E:\\ctest\\experiment2_test1_in.txt");
+	strcpy(pgm, "E:\\ctest\\experiment2_test2_in.txt");
 	if (strchr(pgm, '.') == NULL)
 		strcat(pgm, ".tny");
 	source = fopen(pgm, "r");
@@ -68,6 +72,16 @@ int main(int argc, char * argv[])
 		fprintf(listing, "\nSyntax tree:\n");
 		printTree(syntaxTree);
 	}
+#if !NO_ANALYZE
+	if (!Error)
+	{
+		if (TraceAnalyze) fprintf(listing, "\nBuilding Symbol Table...\n");
+		buildSymtab(syntaxTree);
+		if (TraceAnalyze) fprintf(listing, "\nChecking Types...\n");
+		typeCheck(syntaxTree);
+		if (TraceAnalyze) fprintf(listing, "\nType Checking Finished\n");
+	}
+#endif
 #endif
 	fclose(source);
 

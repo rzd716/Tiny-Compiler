@@ -127,7 +127,9 @@ void printTree(TreeNode * tree)
 				fprintf(listing, "Op: ");
 				printToken(tree->attr.op, "\0");
 				break;
-			case ConstK:
+			case ConstIntK:
+			case ConstStringK:
+			case ConstBoolK:
 				fprintf(listing, "Const: %d\n", tree->attr.val);
 				break;
 			case IdK:
